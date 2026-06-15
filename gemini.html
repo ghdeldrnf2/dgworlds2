@@ -16,8 +16,8 @@ html, body {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   box-sizing: border-box;
-  /* 처음 시작할 때는 무조건 투명(0,0,0,0) 상태로 시작하여 빨간색 고정을 방지합니다 */
-  border: 40px solid rgba(0, 0, 0, 0);
+  /* 기본 상태(대기 상태)를 다시 빨간색 반투명으로 설정했습니다 */
+  border: 40px solid rgba(255, 0, 0, 0.35);
   pointer-events: none;
   transition: border-color .5s ease-in-out;
 }
@@ -47,28 +47,27 @@ var config = {
   warnRTT: 300
 };
 
-// 모블린이 스트림 상태 이벤트를 보낼 때 실행되는 리스너
+// 모블린이 스트림 상태(RTT) 이벤트를 보낼 때 실행되는 리스너
 window.addEventListener("message", function(event) {
-  // 모블린 데이터가 맞는지 명확히 필터링
+  // 모블린 데이터가 맞는지 확인
   if (!event.data || event.data.type !== "moblinStreamStatus") return;
   
   var border = document.getElementById('border');
   var rttDisplay = document.getElementById('rttDisplay');
   if (!border || !rttDisplay) return;
 
-  // 모블린의 실시간 RTT 값 추출
   var rtt = event.data.rtt;
   
-  // RTT 값이 비어있거나 수치가 정상적이지 않다면 투명 상태 유지 후 종료
+  // 데이터가 정상적으로 들어오지 않는 대기 상태라면 기본값인 빨간색 유지
   if (rtt === undefined || rtt === null || isNaN(rtt)) {
-    border.style.borderColor = 'rgba(0, 0, 0, 0)';
+    border.style.borderColor = 'rgba(255, 0, 0, 0.35)';
     rttDisplay.style.display = 'none';
     return;
   }
   
   var rttValue = Math.round(rtt);
 
-  // 1. RTT 1500 이상일 때 글씨 표시 여부
+  // 1. RTT 1500 이상일 때 우측 하단 글자 표시 여부
   if (rttValue >= 1500) {
     rttDisplay.textContent = rttValue + ' RTT';
     rttDisplay.style.display = 'block';
@@ -76,23 +75,16 @@ window.addEventListener("message", function(event) {
     rttDisplay.style.display = 'none';
   }
 
-  // 2. RTT 수치별 테두리 색상 분기
+  // 2. 실제 모블린 수치에 따른 실시간 테두리 변화
   if (rttValue <= config.goodRTT) {
-    border.style.borderColor = 'rgba(0, 0, 0, 0)';       // 정상 (투명)
+    border.style.borderColor = 'rgba(0, 0, 0, 0)';       // 정상 송출 중 (투명)
   } else if (rttValue <= config.warnRTT) {
     border.style.borderColor = 'rgba(255, 255, 0, 0.25)'; // 경고 (노란색)
   } else {
     border.style.borderColor = 'rgba(255, 0, 0, 0.35)';   // 위험 (빨간색)
   }
 });
-
-// 안전장치: 혹시라도 모블린 위젯 로딩 중 에러가 나거나 강제로 초기화될 때를 대비해
-// 페이지가 열리면 무조건 테두리를 투명하게 밀어버립니다.
-window.onload = function() {
-  var border = document.getElementById('border');
-  if (border) border.style.borderColor = 'rgba(0, 0, 0, 0)';
-};
 </script>
 
-</head>
+</body>
 </html>
