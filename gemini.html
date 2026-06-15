@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline';">
 <style>
 html,body{
   margin:0;
@@ -32,14 +33,27 @@ html,body{
   display:none;
   pointer-events:none;
 }
+
+/* 디버깅용 에러 메시지 스타일 */
+#debugLog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: red;
+  background: rgba(0,0,0,0.8);
+  padding: 20px;
+  font-size: 24px;
+  font-family: sans-serif;
+  z-index: 9999;
+  display: none;
+}
 </style>
 </head>
 <body>
 <div id="border"></div>
 <div id="rttDisplay"></div>
-
-<script>
-// 호환성을 위해 var 사용
+<div id="debugLog"></div> <script>
 var config = {
   page: 'https://stats.srt.belabox.net/kuB3M4uQugvgXpcF1OoSSpTslnZf3H',
   key: 'live',
@@ -48,11 +62,16 @@ var config = {
   warnRTT: 300
 };
 
+function showDebug(msg) {
+  var log = document.getElementById('debugLog');
+  log.style.display = 'block';
+  log.textContent = '[Moblin Error] ' + msg;
+}
+
 function update() {
   var border = document.getElementById('border');
   var rttDisplay = document.getElementById('rttDisplay');
   
-  // 구형 브라우저 및 호환성을 위해 XMLHttpRequest 사용
   var xhr = new XMLHttpRequest();
   xhr.open('GET', config.page, true);
   
@@ -63,7 +82,7 @@ function update() {
         var stats = j.publishers[config.key];
         
         if (!stats || !stats.rtt) {
-          border.style.borderColor = 'rgba(255,0,0,0.35)'; // 노란색 불이 들어오게 하고 싶다면 여기를 수정하세요
+          border.style.borderColor = 'rgba(255,0,0,0.35)';
           return;
         }
 
@@ -84,24 +103,20 @@ function update() {
           border.style.borderColor = 'rgba(255,0,0,0.35)';
         }
       } catch(e) {
-        // 파싱 에러시 테두리를 붉은색 반투명으로 표시 (디버깅용)
-        border.style.borderColor = 'rgba(255,0,0,0.5)';
+        showDebug('JSON 파싱 실패: ' + e.message);
       }
     } else {
-      // 서버 에러 발생 시
-      border.style.borderColor = 'rgba(255,0,0,0.5)';
+      showDebug('서버 응답 에러 (Status: ' + xhr.status + ')');
     }
   };
 
   xhr.onerror = function() {
-    // CORS 에러 또는 네트워크 연결 실패 시 테두리를 보라색으로 표시해 원인 파악
-    border.style.borderColor = 'rgba(128,0,128,0.5)';
+    showDebug('네트워크/CORS 차단 발생! 모블린 앱 설정을 확인하세요.');
   };
 
   xhr.send();
 }
 
-// 최초 실행 및 반복 실행
 update();
 setInterval(update, config.interval);
 </script>
