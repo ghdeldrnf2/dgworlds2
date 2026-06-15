@@ -2,58 +2,46 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline'; connect-src * 'unsafe-inline';">
 <style>
-html,body{
-  margin:0;
-  width:1280px;
-  height:720px;
-  background:transparent;
-  overflow:hidden;
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 1280px;
+  height: 720px;
+  background: transparent;
+  overflow: hidden;
 }
 
-#border{
-  position:fixed;
-  inset:0;
-  box-sizing:border-box;
-  border:40px solid rgba(0,0,0,0);
-  pointer-events:none;
-  transition:border-color .5s;
-}
-
-#rttDisplay{
-  position:fixed;
-  right:30px;
-  bottom:20px;
-  font-family:Arial,sans-serif;
-  font-size:72px;
-  font-weight:900;
-  color:#ff3030;
-  text-shadow:0 0 10px rgba(0,0,0,.8);
-  display:none;
-  pointer-events:none;
-}
-
-/* 디버깅용 에러 메시지 스타일 */
-#debugLog {
+#border {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: red;
-  background: rgba(0,0,0,0.8);
-  padding: 20px;
-  font-size: 24px;
-  font-family: sans-serif;
-  z-index: 9999;
+  top: 0; left: 0; right: 0; bottom: 0;
+  box-sizing: border-box;
+  border: 40px solid rgba(0,0,0,0);
+  pointer-events: none;
+  transition: border-color .5s;
+}
+
+#rttDisplay {
+  position: fixed;
+  right: 30px;
+  bottom: 20px;
+  font-family: Arial, sans-serif;
+  font-size: 72px;
+  font-weight: 900;
+  color: #ff3030;
+  text-shadow: 0 0 10px rgba(0,0,0,.8);
   display: none;
+  pointer-events: none;
 }
 </style>
 </head>
 <body>
+
 <div id="border"></div>
 <div id="rttDisplay"></div>
-<div id="debugLog"></div> <script>
+
+<script>
 var config = {
   page: 'https://stats.srt.belabox.net/kuB3M4uQugvgXpcF1OoSSpTslnZf3H',
   key: 'live',
@@ -62,16 +50,11 @@ var config = {
   warnRTT: 300
 };
 
-function showDebug(msg) {
-  var log = document.getElementById('debugLog');
-  log.style.display = 'block';
-  log.textContent = '[Moblin Error] ' + msg;
-}
-
 function update() {
   var border = document.getElementById('border');
   var rttDisplay = document.getElementById('rttDisplay');
-  
+  if (!border || !rttDisplay) return;
+
   var xhr = new XMLHttpRequest();
   xhr.open('GET', config.page, true);
   
@@ -80,21 +63,15 @@ function update() {
       try {
         var j = JSON.parse(xhr.responseText);
         var stats = j.publishers[config.key];
-        
-        if (!stats || !stats.rtt) {
-          border.style.borderColor = 'rgba(255,0,0,0.35)';
-          return;
-        }
+        if (!stats || stats.rtt === undefined) return;
 
         var rtt = Math.round(stats.rtt);
 
-        if (rtt >= 1500) {
-          rttDisplay.textContent = rtt + ' RTT';
-          rttDisplay.style.display = 'block';
-        } else {
-          rttDisplay.style.display = 'none';
-        }
+        // 텍스트 표시 제어
+        rttDisplay.style.display = (rtt >= 1500) ? 'block' : 'none';
+        if (rtt >= 1500) rttDisplay.textContent = rtt + ' RTT';
 
+        // 테두리 색상 제어
         if (rtt <= config.goodRTT) {
           border.style.borderColor = 'rgba(0,0,0,0)';
         } else if (rtt <= config.warnRTT) {
@@ -102,16 +79,8 @@ function update() {
         } else {
           border.style.borderColor = 'rgba(255,0,0,0.35)';
         }
-      } catch(e) {
-        showDebug('JSON 파싱 실패: ' + e.message);
-      }
-    } else {
-      showDebug('서버 응답 에러 (Status: ' + xhr.status + ')');
+      } catch(e) {}
     }
-  };
-
-  xhr.onerror = function() {
-    showDebug('네트워크/CORS 차단 발생! 모블린 앱 설정을 확인하세요.');
   };
 
   xhr.send();
@@ -120,5 +89,6 @@ function update() {
 update();
 setInterval(update, config.interval);
 </script>
+
 </body>
 </html>
