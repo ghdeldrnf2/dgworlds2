@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBS Bitrate Display</title>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: rgba(0, 0, 0, 0);
+      margin: 0;
+      padding: 0;
+      font-family: 'Open Sans', sans-serif;
+      overflow: hidden;
+      color: #1e90ff;
+      font-size: 40px;
+      font-weight: 600;
+      text-align: right;
+      
+      
+    }
+    #bitrate {
+      padding: 8px;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    #bitrate * {
+      vertical-align: middle;
+    }
+  </style>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div id="bitrate"></div>
+  <script>
+    const config = {
+      type: 'SRT',
+      page: 'https://stats.srt.belabox.net/kuB3M4uQugvgXpcF1OoSSpTslnZf3H',
+      key: 'live',
+      rtt: true,
+      showRTT: true,
+      interval: 2000,
+      noSignalText: 'NO SIGNAL',
+      bitrateIcon: 'Gauge',
+      bitrateIconPosition: 'left',
+      bitrateIconSize: 40,
+      bitrateIconColor: '#ff841f',
+      bitrateColor: '#ff841f',
+      rttColor: '#ff841f',
+      noSignalIcon: 'AlertCircle',
+      noSignalIconPosition: 'left',
+      noSignalIconSize: 40,
+      noSignalIconColor: '#ff4444',
+      noSignalColor: '#ff4444'
+    };
+
+    const createIcon = (name, size, color) => {
+      const icon = lucide.createIcons({
+        icons: {
+          [name]: lucide[name]
+        }
+      });
+      return `<i data-lucide="${name}" style="width: ${size}px; height: ${size}px; color: ${color}; margin: ${name === config.bitrateIcon ? (config.bitrateIconPosition === 'left' ? '0 8px 0 0' : '0 0 0 8px') : (config.noSignalIconPosition === 'left' ? '0 8px 0 0' : '0 0 0 8px')}"></i>`;
+    };
+
+    const tryFetch = async (page) => {
+      try {
+        return await fetch(page);
+      } catch (error) {
+        console.log(page, error);
+      }
+      return null;
+    };
+
+    const getSrtBitrate = async (page, publisher) => {
+      const response = await tryFetch(page);
+      if (!response) return null;
+
+      const srtdata = await response.json();
+      if (!srtdata.publishers[publisher]) return null;
+
+      const { bitrate, rtt } = srtdata.publishers[publisher];
+      return { bitrate, rtt };
+    };
+
+    const getNmsBitrate = async (page) => {
+      const response = await tryFetch(page);
+      if (!response) return null;
+
+      const { bitrate } = await response.json();
+      if (!bitrate) return null;
+      return { bitrate };
+    };
+
+    const getNginxBitrate = async (page, key) => {
+      const response = await tryFetch(page);
+      if (!response) return null;
+
+      const data = await response.text();
+      const parse = new window.DOMParser().parseFromString(data, "text/xml");
+      const live = parse.getElementsByTagName(key)[0];
+      const node = live.childNodes[1].childNodes[14];
+      if (!node) return null;
+
+      const bitrate = Math.round(node.childNodes[0].nodeValue / 1024);
+      return { bitrate };
+    };
+
+    const getBitrate = async () => {
+      const handlers = {
+        "SRT": () => getSrtBitrate(config.page, config.key),
+        "NMS": () => getNmsBitrate(config.page),
+        "NGINX": () => getNginxBitrate(config.page, config.key)
+      };
+
+      return await handlers[config.type]();
+    };
+
+    const setText = (stats) => {
+      const el = document.getElementById('bitrate');
+      let html = '';
+
+      if (!stats || !stats.bitrate) {
+        if (config.noSignalIcon && config.noSignalIconPosition === 'left') {
+          html += createIcon(config.noSignalIcon, config.noSignalIconSize, config.noSignalIconColor);
+        }
+        html += `<span style="color: ${config.noSignalColor}">${config.noSignalText}</span>`;
+        if (config.noSignalIcon && config.noSignalIconPosition === 'right') {
+          html += createIcon(config.noSignalIcon, config.noSignalIconSize, config.noSignalIconColor);
+        }
+      } else {
+        if (config.bitrateIcon && config.bitrateIconPosition === 'left') {
+          html += createIcon(config.bitrateIcon, config.bitrateIconSize, config.bitrateIconColor);
+        }
+        html += `<span style="color: ${config.bitrateColor}">${stats.bitrate} kb/s</span>`;
+        if (config.showRTT && stats.rtt) {
+          html += `<span style="color: ${config.rttColor}"> • ${Math.round(stats.rtt)} RTT</span>`;
+        }
+        if (config.bitrateIcon && config.bitrateIconPosition === 'right') {
+          html += createIcon(config.bitrateIcon, config.bitrateIconSize, config.bitrateIconColor);
+        }
+      }
+
+      el.innerHTML = html;
+      lucide.createIcons();
+    };
+
+    const run = async () => {
+      setText(await getBitrate());
+      setInterval(async () => {
+        setText(await getBitrate());
+      }, config.interval);
+    };
+
+    run();
+  </script>
+</body>
+</html>
