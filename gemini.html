@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline'; connect-src * 'unsafe-inline';">
 <style>
 html, body {
   margin: 0;
@@ -43,75 +42,42 @@ html, body {
 
 <script>
 var config = {
-  // 모블린의 CORS 차단을 우회하기 위해 공공 프록시 주소를 앞에 붙였습니다.
-  page: 'https://cors-anywhere.herokuapp.com/https://stats.srt.belabox.net/kuB3M4uQugvgXpcF1OoSSpTslnZf3H',
-  key: 'live',
-  interval: 2000,
   goodRTT: 100,
   warnRTT: 300
 };
 
-function update() {
+// 모블린 앱이 브라우저 위젯으로 실시간 스트림 상태(RTT 등)를 보내줄 때 실행되는 리스너
+window.addEventListener("message", function(event) {
+  // 모블린이 전달하는 데이터 구조 확인
+  if (!event.data || event.data.type !== "moblinStreamStatus") return;
+  
   var border = document.getElementById('border');
   var rttDisplay = document.getElementById('rttDisplay');
   if (!border || !rttDisplay) return;
 
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', config.page, true);
+  // 모블린 내부에서 측정된 실시간 RTT 값 가져오기
+  var rtt = event.data.rtt;
+  if (rtt === undefined || rtt === null) return;
   
-  // 프록시 서버 요청을 위한 필수 헤더 세팅
-  xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-  
-  xhr.onload = function() {
-    if (xhr.status >= 200 && xhr.status < 400) {
-      try {
-        var j = JSON.parse(xhr.responseText);
-        
-        if (!j || !j.publishers || !j.publishers[config.key]) {
-          // 방송 데이터가 안 넘어올 때의 기본 상태 설정 (원하는 대로 변경 가능)
-          border.style.borderColor = 'rgba(255, 0, 0, 0.35)'; // 현재는 빨간색 유지 상태
-          rttDisplay.style.display = 'none';
-          return;
-        }
+  var rttValue = Math.round(rtt);
 
-        var stats = j.publishers[config.key];
-        if (stats.rtt === undefined || stats.rtt === null) return;
+  // 1. RTT 1500 이상일 때 우측 하단 글씨 표시
+  if (rttValue >= 1500) {
+    rttDisplay.textContent = rttValue + ' RTT';
+    rttDisplay.style.display = 'block';
+  } else {
+    rttDisplay.style.display = 'none';
+  }
 
-        var rtt = Math.round(stats.rtt);
-
-        // 1500 이상일 때 글자 표시
-        if (rtt >= 1500) {
-          rttDisplay.textContent = rtt + ' RTT';
-          rttDisplay.style.display = 'block';
-        } else {
-          rttDisplay.style.display = 'none';
-        }
-
-        // RTT 수치별 테두리 색상 분기
-        if (rtt <= config.goodRTT) {
-          border.style.borderColor = 'rgba(0, 0, 0, 0)';       // 정상 (투명으로 변경!)
-        } else if (rtt <= config.warnRTT) {
-          border.style.borderColor = 'rgba(255, 255, 0, 0.25)'; // 경고 (노란색)
-        } else {
-          border.style.borderColor = 'rgba(255, 0, 0, 0.35)';   // 위험 (빨간색)
-        }
-      } catch(e) {
-        border.style.borderColor = 'rgba(255, 0, 0, 0.35)';
-      }
-    } else {
-      border.style.borderColor = 'rgba(255, 0, 0, 0.35)';
-    }
-  };
-
-  xhr.onerror = function() {
-    border.style.borderColor = 'rgba(255, 0, 0, 0.35)';
-  };
-
-  xhr.send();
-}
-
-update();
-setInterval(update, config.interval);
+  // 2. RTT 값에 따른 테두리 색상 분기
+  if (rttValue <= config.goodRTT) {
+    border.style.borderColor = 'rgba(0, 0, 0, 0)';       // 정상 (투명)
+  } else if (rttValue <= config.warnRTT) {
+    border.style.borderColor = 'rgba(255, 255, 0, 0.25)'; // 경고 (노란색)
+  } else {
+    border.style.borderColor = 'rgba(255, 0, 0, 0.35)';   // 위험 (빨간색)
+  }
+});
 </script>
 
 </body>
