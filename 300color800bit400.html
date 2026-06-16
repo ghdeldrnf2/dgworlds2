@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+html,body{
+  margin:0;
+  width:1280px;
+  height:720px;
+  background:transparent;
+  overflow:hidden;
+}
+
+#border{
+  position:fixed;
+  inset:0;
+  box-sizing:border-box;
+  border:40px solid rgba(0,0,0,0);
+  pointer-events:none;
+  transition:border-color .5s;
+}
+
+#rttDisplay{
+  position:fixed;
+  right:30px;
+  bottom:20px;
+  font-family:Arial,sans-serif;
+  font-size:72px;
+  font-weight:900;
+  color:#ff3030;
+  text-shadow:0 0 10px rgba(0,0,0,.8);
+  display:none;
+  pointer-events:none;
+}
+
+</style>
+</head>
+<body>
+<div id="border"></div>
+<div id="rttDisplay"></div>
+
+<script>
+const config={
+  page:'https://stats.srt.belabox.net/kuB3M4uQugvgXpcF1OoSSpTslnZf3H',
+  key:'live',
+  interval:2000,
+  goodRTT:300,
+  warnRTT:800
+};
+
+async function getStats(){
+  try{
+    const r=await fetch(config.page);
+    const j=await r.json();
+    return j.publishers[config.key];
+  }catch(e){
+    return null;
+  }
+}
+
+async function update(){
+  const stats=await getStats();
+  const border=document.getElementById('border');
+
+  if(!stats || !stats.rtt){
+    border.style.borderColor='rgba(255,0,0,0.35)';
+    return;
+  }
+
+  const rtt=Math.round(stats.rtt);
+  const rttDisplay=document.getElementById('rttDisplay');
+
+  if(rtt >= 1500){
+    rttDisplay.textContent=`${rtt} RTT`;
+    rttDisplay.style.display='block';
+  }else{
+    rttDisplay.style.display='none';
+  }
+
+  const bitrate=Number(stats.bitrate||0);
+
+  if(bitrate<=400){
+    border.style.borderColor='rgba(255,0,0,0.35)';
+  }else if(rtt <= config.goodRTT){
+    border.style.borderColor='rgba(0,0,0,0)';
+  }else if(rtt <= config.warnRTT){
+    border.style.borderColor='rgba(255,255,0,0.25)';
+  }else{
+    border.style.borderColor='rgba(255,0,0,0.35)';
+  }
+}
+
+update();
+setInterval(update, config.interval);
+</script>
+</body>
+</html>
