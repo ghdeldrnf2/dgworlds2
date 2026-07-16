@@ -43,9 +43,9 @@ html,body{
 const config={
   page:'https://stats.srt.belabox.net/kuB3M4uQugvgXpcF1OoSSpTslnZf3H',
   key:'live',
-  interval:2000,
-  goodRTT:300,
-  warnRTT:800
+  interval:1000,
+  goodRTT:700,
+  warnRTT:1000
 };
 
 async function getStats(){
@@ -79,7 +79,7 @@ async function update(){
 
   const bitrate=Number(stats.bitrate||0);
 
-  if(bitrate<=400){
+  if(bitrate<=350){
     border.style.borderColor='rgba(255,0,0,0.35)';
   }else if(rtt <= config.goodRTT){
     border.style.borderColor='rgba(0,0,0,0)';
