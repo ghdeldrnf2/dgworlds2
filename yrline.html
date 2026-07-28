@@ -25,7 +25,10 @@ html,body{
 #infoDisplay{
   position:fixed;
   right:30px;
-  bottom:20px;
+  /* 아래 두 줄이 오른쪽 중앙 정렬을 위한 핵심 코드입니다 */
+  top:50%;
+  transform:translateY(-50%);
+  
   font-family:Arial,sans-serif;
   font-size:54px; /* 두 줄 표시를 위해 폰트 크기를 54px로 살짝 조정 (필요시 수정 가능) */
   font-weight:900;
@@ -48,7 +51,7 @@ html,body{
 const config={
   page:'https://stats.srt.belabox.net/kuB3M4uQugvgXpcF1OoSSpTslnZf3H',
   key:'live',
-  interval:2000
+  interval:1000
 };
 
 async function getStats(){
